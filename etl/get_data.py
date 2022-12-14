@@ -16,50 +16,53 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-def download_from_nba_api():
+def upload_all_players_career_stats_to_s3(s3, players: list, bucket: str) -> None:
     """
     Uses nba_api to get career data for players and teams
     Uploads JSON to s3://mushroomsundays/nba
     """
-    ##################################
-    # Players
-    ##################################
-
-    # id, full_name, first_name, last_name, is_active
-    all_players = players.get_players() # list of dicts
-    json_players = json.dumps(all_players, indent=2)
-
-    with open("all_players.json", "w") as f:
-        f.write(json_players)
-
+    
     # Using id, get player career stats
-    for d in all_players:
+    for d in players:
         id = d.get('id')
         career = playercareerstats.PlayerCareerStats(per_mode36='Totals', player_id=id)
-        logging.info("Got player career stats for {id}")
+        logging.info("Loaded player career stats for {id}.")
         #career_df = career.get_data_frames()[0] # Error; use json instead
         career_json = career.get_json()
-        career_dict = career.get_dict()['resultSets'][0]
-        headers = career_dict['headers']
-        data = career_dict['rowSet']
-        career_df = pd.DataFrame(data, columns=headers)
+
+        key = f"nba/players/{id}.json"
+        upload_to_s3(s3, obj=career_json, bucket=bucket, key=key)
+        logging.info(f"Successful S3 upload: S3://{bucket}/{key}.")
         
         time.sleep(1)
         break
 
-    ##################################
-    # Teams
-    ##################################
+def main():
+    # Create boto3 session for uploading files to S3
+    s3 = create_boto3_session()
+    logging.info("Boto3 session created.")
 
+    # Bucket for S3 uploads
+    bucket = "mushroomsundays"
+
+    # Get player IDs and other info for all players; upload to S3
+    # id, full_name, first_name, last_name, is_active
+    all_players = players.get_players() # list of dicts
+    all_players_json = json.dumps(all_players, indent=2)
+    key = "nba/player_lookup.json"
+    upload_to_s3(s3, obj=all_players_json, bucket=bucket, key=key)
+    logging.info(f"Successful S3 upload: S3://{bucket}/{key}.")
+
+    # Get team IDs and other info for all teams; upload to S3
     # id, full_name, abbreviation, nickname, city, state, year_founded
     all_teams = teams.get_teams() # list of dicts
-    json_teams = json.dumps(all_teams, indent=2)
+    all_teams_json = json.dumps(all_teams, indent=2)
+    key = "nba/team_lookup.json"
+    upload_to_s3(s3, obj=all_teams_json, bucket=bucket, key=key)
+    logging.info(f"Successful S3 upload: S3://{bucket}/{key}.")
 
-    with open("all_teams.json", "w") as f:
-        f.write(json_teams)
-
-def main():
-    download_from_nba_api() 
+    # Get all players career stats; upload to S3
+    upload_all_players_career_stats_to_s3(s3, players=all_players, bucket=bucket) 
 
 if __name__ == "__main__":
     main()

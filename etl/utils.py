@@ -8,8 +8,6 @@ def create_boto3_session():
     session = boto3.Session()
     return session.resource('s3')
 
-def upload_to_s3(obj: dict, bucket: str, filepath: str) -> None:
-    """Converts dictionary to JSON and then uploads to the specified 
-    S3 destination"""
-    
-    s3 = create_boto3_session()
+def upload_to_s3(s3, obj: str, bucket: str, key: str) -> None:
+    """Uploads JSON to specified S3 destination."""
+    s3.put_object(Body=obj, Bucket=bucket, Key=key)
