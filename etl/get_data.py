@@ -4,6 +4,18 @@ import pandas as pd
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.static import players, teams
 
+# Create and configure logger
+logging.basicConfig(filename="get_data.log",
+                    format='%(asctime)s %(message)s',
+                    filemode='w')
+# Creating an object
+logger = logging.getLogger()
+ 
+# Setting the threshold of logger to DEBUG
+logger.setLevel(logging.DEBUG)
+
+
+
 def upload_to_s3(obj: dict, bucket: str, filepath: str) -> None:
     """Converts dictionary to JSON and then uploads to the specified 
     S3 destination"""
